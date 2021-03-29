@@ -9,14 +9,14 @@ import java.util.*;
  */
 public class NumbersContainer {
 
-    private Map<Integer, List<Integer>> inputNumberToOriginalIndexes = new HashMap<>();
+    private final Map<Integer, List<Integer>> inputNumberToOriginalIndexes = new HashMap<>();
 
-    private List<Integer> originalInputNumbers;
+    private final List<Integer> originalInputNumbers;
 
-    private Integer[] sortedArray;
+    private final Integer[] sortedArray;
 
     public NumbersContainer(List<Integer> inputNumbers) {
-        for(int i=0; i<inputNumbers.size(); i++) {
+        for (int i = 0; i < inputNumbers.size(); i++) {
             int inputNumber = inputNumbers.get(i);
 
             insertIntoHashMap(inputNumber, i);
@@ -45,8 +45,8 @@ public class NumbersContainer {
     }
 
     public List<BigInteger> reorderFactorialsAccordingToOriginalOrder(List<BigInteger> factorials) {
-        BigInteger []output = new BigInteger[factorials.size()];
-        for (int i=0; i<originalInputNumbers.size(); i++) {
+        BigInteger[] output = new BigInteger[factorials.size()];
+        for (int i = 0; i < originalInputNumbers.size(); i++) {
             List<Integer> indexes = inputNumberToOriginalIndexes.get(sortedArray[i]);
             int finalI = i;
             indexes.stream().forEach(index ->
