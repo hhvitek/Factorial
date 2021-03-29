@@ -79,4 +79,27 @@ public abstract class FactorialTest {
         Assertions.assertEquals(expectedOutput, actualOutput);
     }
 
+    @Test
+    public void negativeNumberInInputThrowsExceptionTest() {
+        List<Integer> inputNumbers = List.of(10, 5, -1, 7);
+
+        Assertions.assertThrows(
+                NumberIsLessThanZeroException.class,
+                () -> factorial.compute(inputNumbers)
+        );
+    }
+
+    @Test
+    public void containsZeroTest() {
+        List<Integer> inputNumbers = List.of(10, 5, 0, 7);
+        List<BigInteger> expectedOutput = List.of(
+                BigInteger.valueOf(3628800),
+                BigInteger.valueOf(120),
+                BigInteger.ONE,
+                BigInteger.valueOf(5040)
+        );
+
+        Assertions.assertEquals(expectedOutput, factorial.compute(inputNumbers));
+    }
+
 }
