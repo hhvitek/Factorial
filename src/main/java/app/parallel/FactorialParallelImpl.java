@@ -1,6 +1,7 @@
 package app.parallel;
 
 import app.Factorial;
+import app.NumberIsLessThanZeroException;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -9,7 +10,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-/**<pre>
+/**
+ * <pre>
  * Algorithm:
  * INPUT array of integers
  * OUTPUT array of factorials
@@ -42,7 +44,6 @@ public class FactorialParallelImpl implements Factorial {
 
     // inputNumbers sorted and additional 1 is at the beginning (0 index)
     private Integer[] input;
-    private int inputSize = 0;
 
     private BigInteger[] partialFactorials;
 
@@ -66,26 +67,33 @@ public class FactorialParallelImpl implements Factorial {
 
     /**
      * @throws ParallelException may throw if the computation is interrupted or is taking too long
+     * @throws NumberIsLessThanZeroException if any of inputNumbers parameters is a negative number.
+     * The factorial of a negative number is not defined.
      */
     @Override
-    public List<BigInteger> compute(List<Integer> inputNumbers) {
+    public List<BigInteger> compute(List<Integer> inputNumbers) throws ParallelException, NumberIsLessThanZeroException {
         executor = createExecutor(this.numberOfComputingThreads);
+        
+        // among other things it initialize input[] array
         initializeRequiredStructures(inputNumbers);
 
-        // for each chunk submit runnable
-        for(int chunkIndex=0; chunkIndex<inputSize - 1; chunkIndex++) {
+        if (sortedInputNumbersContainsNegativeNumber(input)) {
+            throw new NumberIsLessThanZeroException(input[1]);
+        }
+
+        for (int chunkIndex = 0; chunkIndex < inputNumbers.size(); chunkIndex++) {
             int finalChunkIndex = chunkIndex;
-            Runnable runnable =  () -> computePartialFactorial(finalChunkIndex);
+
+            Runnable runnable = () -> computePartialFactorial(finalChunkIndex);
             executor.submit(runnable);
         }
 
         // wait for all tasks to finish...
         waitForChunksComputationToFinishIfErrorThrow(executor);
 
-        // sequential reduction
         List<BigInteger> output = new ArrayList<>();
         BigInteger tmpFactorial = BigInteger.ONE;
-        for(int i=0; i<inputSize - 1; i++) {
+        for (int i = 0; i < inputNumbers.size(); i++) {
             tmpFactorial = tmpFactorial.multiply(partialFactorials[i]);
             output.add(tmpFactorial);
         }
@@ -93,22 +101,36 @@ public class FactorialParallelImpl implements Factorial {
         return numbers.reorderFactorialsAccordingToOriginalOrder(output);
     }
 
+    /**
+     *
+     * @param inputNumbers List of number we want to compute factorials for
+     */
     private void initializeRequiredStructures(List<Integer> inputNumbers) {
         this.input = new Integer[inputNumbers.size() + 1];
-        this.inputSize = inputNumbers.size() + 1;
         this.partialFactorials = new BigInteger[inputNumbers.size() + 1];
 
         this.numbers = new NumbersContainer(inputNumbers);
-        Integer [] sortedInputNumbers = numbers.getAsSortedArray();
+        Integer[] sortedInputNumbers = numbers.getAsSortedArray();
 
         this.input[0] = 1; // input array starts with 1 O(1)
         System.arraycopy(sortedInputNumbers, 0, this.input, 1, sortedInputNumbers.length);
     }
 
-    private void waitForChunksComputationToFinishIfErrorThrow(ExecutorService executor) throws ParallelException{
+    /**
+     * Basically
+     * inputNumbers are sorted into an input[] array
+     * The first element (index 0) of this array is always number "1"
+     * => Array starts with number 1 and the following elements are in the sorted order
+     */
+    private boolean sortedInputNumbersContainsNegativeNumber(Integer[] inputSortedArray) {
+        return inputSortedArray != null && inputSortedArray.length > 1 && inputSortedArray[1] < 0;
+    }
+
+    private void waitForChunksComputationToFinishIfErrorThrow(ExecutorService executor) throws ParallelException {
         executor.shutdown();
         try {
             boolean retValue = executor.awaitTermination(MAX_COMPUTATION_TIME_IN_SECONDS, TimeUnit.SECONDS);
+
             if (!retValue) {
                 executor.shutdownNow();
                 throw new ParallelException(
@@ -131,7 +153,7 @@ public class FactorialParallelImpl implements Factorial {
     private BigInteger computePartialFactorialInChunk(int valueMin, int valueMax) {
         BigInteger currentValue = BigInteger.ONE;
 
-        for (int i=valueMin + 1; i<=valueMax; i++) {
+        for (int i = valueMin + 1; i <= valueMax; i++) {
             currentValue = currentValue.multiply(BigInteger.valueOf(i));
         }
         return currentValue;
